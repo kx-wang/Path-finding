@@ -7,6 +7,8 @@ Created on Fri May 22 11:17:44 2020
 Solving a maze using deep Q-learning coupled with experience replay 
 Ref: Human-level control through deep reinforcement
 learning, doi:10.1038/nature14236
+
+***work in progress***
 """
 
 # import packages 
