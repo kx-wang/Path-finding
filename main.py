@@ -17,13 +17,13 @@ import matplotlib.pyplot as plt
 
 # -------------------------functions--------------------------------------------------------------------------
 # turns the cell [row,col] into one number 
-def cell2ind(cell): # done 
+def cell2ind(cell): 
     a = cell[0]
     b = cell[1]
     ind = b + a*n_row
     return ind
 
-def observe(action,state): # done 
+def observe(action,state): 
     
     # get the new state resulting from the action 
     if action == 0: # move left 
@@ -41,7 +41,7 @@ def observe(action,state): # done
     elif new_state[0] < 0 or new_state[1] < 0 or new_state[0] > n_row-1 or new_state[1] > n_col-1: # hit boundary 
         reward = -0.8
     else: # is a valid move 
-        reward = -0.04 
+        reward = -0.01 
         
     return reward, new_state  
 
@@ -64,7 +64,7 @@ def get_batch(D, batch_size) :
 #----------------------main script------------------------------    
 # 0 = free cell, 1 = occupied cell 
 maze = np.array([
-    [ 0,  1,  0,  0,  0,  0,  0,  0,  0,  0],
+    [ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
     [ 0,  0,  0,  0,  0,  1,  0,  0,  0,  0],
     [ 0,  0,  0,  0,  0,  1,  0,  0,  0,  0],
     [ 1,  1,  0,  1,  1,  0,  1,  0,  0,  0],
@@ -102,9 +102,15 @@ model = keras.Sequential([
     keras.layers.Dense(10*10, activation='relu'),
     keras.layers.Dense(4) # output layer has 4 outputs, one for each action 
 ])
-model.compile(optimizer='adam', loss='mse') # loss is the mean squared loss 
+model.compile(optimizer='rmsprop', loss='mse') # loss is the mean squared loss 
 
-
+indexing_table =np.zeros(shape = (n_row*n_col,2) )
+counter = 0;
+for k in range(n_row):
+    for j in range(n_col):
+        indexing_table[counter,:] = [k, j ]
+        counter = counter + 1
+    
     
 # --------- when there is not yet enough data to have a Q_pred -----------------
 init_Q_data = np.zeros( shape = (M) ) 
@@ -122,23 +128,25 @@ for loops in range(300):
     # execute action to get reward and observe the next state 
     reward, new_state = observe(action,state) 
     
-    # if game over, then start a new episode (effectively)
-    if reward == 1 or reward == -0.8:
-        # reset starting state  
-        state = np.array( [0,0] )
-    
     # store this transition info (S,A,R,S') into memory if it's not already stored 
     transition = [cell2ind(state), action, reward, cell2ind(new_state)]
     if np.size( np.where((D[:,0]==transition[0]) & (D[:,1]==transition[1]) & (D[:,2]==transition[2]) & (D[:,3]==transition[3])) )==0:
         D[counter % N, :] = transition
         init_Q_data[counter] = reward
         counter = counter + 1 # counts the number of unique transitions
-    
+            
+    # if game over, then start a new episode (effectively)
+    if reward == 1 or reward == -0.8:
+        # reset starting state  
+        state = np.array( [0,0] )
+    else: 
+        # updates for the next time step 
+        state = new_state 
+        
     if counter == N:
         break 
     
-    # updates for the next time step 
-    state = new_state 
+
 
 model.fit(D[:,0], init_Q_data, epochs = 8, batch_size = 16, verbose =0 ) # the Q_pred      
   
@@ -146,11 +154,11 @@ model.fit(D[:,0], init_Q_data, epochs = 8, batch_size = 16, verbose =0 ) # the Q
 
 
 # --------------------------------training-------------------------------------- 
+Q_table = np.ones( shape = (10*10) )*np.Inf 
 for episode in range(M): 
     
-      
     state = start # reset starting state
-    path = [] # this is to record the path taken 
+   # path = [] # this is to record the path taken 
        
     for t in range(T):    
         
@@ -159,6 +167,7 @@ for episode in range(M):
             action = random_action() # with probability eps select a random action a_t
         else: 
             action = np.argmax(  model.predict( np.array([cell2ind(state)]))  ) 
+            Q_table[cell2ind(state)] = action
         
         if eps > 0.1:
             eps = eps - 0.05
@@ -182,33 +191,61 @@ for episode in range(M):
         B_states = B[:,0] # all the input states of the batch 
         
         Q_target = np.zeros( shape=(len(B_states)) )   
-        for j in range(len(B)):
+        for j in range(len(B)-1):
             reward_j = B[j,2]
             if reward_j == 1 or reward == -0.8:
                 Q_target[j] = reward_j
             else: 
-                Q_target[j] = reward_j + gamma * np.max( model.predict( np.array([B_states[j]]) ))
+                Q_target[j] = reward_j + gamma * np.max( model.predict( np.array([B_states[j+1]]) ))
         
         # Train/update neural network model, with new weights, after every C steps 
-        if C == 10: 
-            Q_pred = model.fit(B_states, Q_target, epochs = 8, batch_size = 16, verbose =0 )
-            loss = model.evaluate(B_states, Q_target, verbose = 0) 
+        if C == 30: 
+            Q_pred = model.fit(B_states, Q_target, epochs = 8, batch_size = 16, verbose = 0 )
+            loss = model.evaluate(B_states, Q_target, verbose = 1) 
             C == 1
         else: 
             C = C + 1
             
         # updates for the next time step 
-        path.append(state)
+       # path.append(state)
         state = new_state 
         
         
+# --------------------------------testing-------------------------------------- 
+state = start # reset starting state
+path = [] # this is to record the path taken 
+   
+for t in range(T):    
+    
+    # select an action according to epsilon-greedy policy derived from Q
+    if np.random.random() < 0.05:
+        action = random_action() # with probability eps select a random action a_t
+    else: 
+        action = np.argmax(  model.predict( np.array([cell2ind(state)]))  ) 
+    
+    # execute action to get reward and observe the next state 
+    reward, new_state = observe(action,state) 
+    path.append(state)
+    if reward == 1 or reward == -0.8:
+        break
+                
+    # updates for the next time step     
+    state = new_state       
         
-# --------------------------------testing-------------------------------- 
-      
         
-        
-        
-        
+#-----------------visualizing the solution-------------------------------------        
+path_matrix = np.zeros(shape=(n_row, n_col))
+for i in range(len(path)):
+    k = path[i][0]
+    j = path[i][1]
+    path_matrix[k][j]=2
+    
+path_matrix = path_matrix+maze 
+fig = plt.figure(figsize=(6, 3.2))
+ax = fig.add_subplot(111)
+ax.set_title('colorMap')
+plt.imshow(path_matrix)
+ax.set_aspect('equal')
         
         
         
