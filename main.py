@@ -81,13 +81,13 @@ n_col = 10
 goal = np.array([9,9])
 start = np.array([0,0])
 
-gamma = 0.99 # discount factor 
+gamma = 0.8 # discount factor 
 eps = 1      # initial probability that the action will no follow that suggested by Q
-M = 100      # maximum number of episodes 
+M = 500      # maximum number of episodes 
 T = 100      # maximum number of time steps 
 N = n_row*n_col # the replay memory D has the capacity to store N experiences 
-C = 10          # at every C steps, learn the Q model/ neural network again  
-batch_size = 30 # size of sample from memory 
+C = 0          # at every certain number of steps, learn the Q model/ neural network again  
+batch_size = 50 # size of sample from memory 
 
 # D is a matrix to store the agent's experiences at each time step
 # the experience has values s_t,a_t,r_t,s_{t+1} 
@@ -113,14 +113,13 @@ for k in range(n_row):
     
     
 # --------- when there is not yet enough data to have a Q_pred -----------------
-init_Q_data = np.zeros( shape = (M) ) 
-
-counter = 0
+init_Q_data = np.zeros( shape = (N) ) # just store the present reward as a result of the action 
+counter = 0 # below, the preliminary data gathering will stop when counter = N 
   
 # starting state  
 state = start
    
-for loops in range(300):    
+for loops in range(1000):    
     
     # select a random action 
     action = random_action() 
@@ -146,15 +145,13 @@ for loops in range(300):
     if counter == N:
         break 
     
-
-
+# for the DQN to the initial data 
 model.fit(D[:,0], init_Q_data, epochs = 8, batch_size = 16, verbose =0 ) # the Q_pred      
   
 
-
-
 # --------------------------------training-------------------------------------- 
-Q_table = np.ones( shape = (10*10) )*np.Inf 
+Q_table = np.ones( shape = (10*10) )*np.Inf # keep track of all the actions 
+loss = []
 for episode in range(M): 
     
     state = start # reset starting state
@@ -199,9 +196,9 @@ for episode in range(M):
                 Q_target[j] = reward_j + gamma * np.max( model.predict( np.array([B_states[j+1]]) ))
         
         # Train/update neural network model, with new weights, after every C steps 
-        if C == 30: 
+        if C == 10: 
             Q_pred = model.fit(B_states, Q_target, epochs = 8, batch_size = 16, verbose = 0 )
-            loss = model.evaluate(B_states, Q_target, verbose = 1) 
+            loss.append( model.evaluate(B_states, Q_target, verbose = 0) )
             C == 1
         else: 
             C = C + 1
@@ -246,9 +243,14 @@ ax = fig.add_subplot(111)
 ax.set_title('colorMap')
 plt.imshow(path_matrix)
 ax.set_aspect('equal')
+plt.show() 
         
         
-        
+plt.plot([i for i in range(len(loss))], loss)
+plt.title("Loss")
+plt.xlabel("iteration")
+plt.ylabel("mean squared loss")
+plt.show()
         
         
         
