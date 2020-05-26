@@ -4,11 +4,12 @@ Created on Fri May 22 11:17:44 2020
 
 @author: Cathy
 
-Solving a maze using deep Q-learning coupled with experience replay 
+*Solving a maze using deep Q-learning coupled with experience replay 
+*This code is work in progress
+
 Ref: Human-level control through deep reinforcement
 learning, doi:10.1038/nature14236
 
-***work in progress***
 """
 
 # import packages 
