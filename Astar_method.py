@@ -4,8 +4,9 @@ Created on Wed May 20 19:14:44 2020
 
 @author: Cathy
 
-Implements the A* algorithm to solve for shortest path from start to finish in a maze. 
-If the heuristic function h is set to zero, then Dijkstra's method is recovered
+*Implements the A* algorithm to solve for shortest path from start to finish in a maze. 
+*If the heuristic function h is set to zero, then Dijkstra's method is recovered
+*Is working 
 
 Ref: https://en.wikipedia.org/wiki/A*_search_algorithm
 """
