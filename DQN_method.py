@@ -47,10 +47,11 @@ def observe(action,state):
         
     return reward, new_state  
 
-def random_action() : # done 
+def random_action() :
     x = np.random.choice([0,1,2,3])    
     return x
 
+# to get a random batch of transitions from memory 
 def get_batch(D, batch_size) :
     N = len(D)
     B = np.zeros(shape = (batch_size,4))
@@ -58,10 +59,6 @@ def get_batch(D, batch_size) :
         rand_int = int( np.random.randint(N)  )  
         B[i,:] = D[rand_int,:]    
     return B 
-
-
-
-
 
 #----------------------main script------------------------------    
 # 0 = free cell, 1 = occupied cell 
@@ -83,7 +80,7 @@ n_col = 10
 goal = np.array([9,9])
 start = np.array([0,0])
 
-gamma = 0.8 # discount factor 
+gamma = 0.8  # discount factor in the Bellmann eqn 
 eps = 1      # initial probability that the action will no follow that suggested by Q
 M = 500      # maximum number of episodes 
 T = 100      # maximum number of time steps 
@@ -92,10 +89,9 @@ C = 0          # at every certain number of steps, learn the Q model/ neural net
 batch_size = 50 # size of sample from memory 
 
 # D is a matrix to store the agent's experiences at each time step
-# the experience has values s_t,a_t,r_t,s_{t+1} 
+# the experience has values state_t,action_t,reward_t,state_{t+1} 
 D = np.empty( shape = (N,4) )
 D[:] = np.NaN 
-
 
 # defining the DQN model: 
 # this predicts the Q value for each action, given the input state  
@@ -104,7 +100,7 @@ model = keras.Sequential([
     keras.layers.Dense(10*10, activation='relu'),
     keras.layers.Dense(4) # output layer has 4 outputs, one for each action 
 ])
-model.compile(optimizer='rmsprop', loss='mse') # loss is the mean squared loss 
+model.compile(optimizer='rmsprop', loss='mse') # compile the model, loss is the mean squared loss 
 
 indexing_table =np.zeros(shape = (n_row*n_col,2) )
 counter = 0;
@@ -147,12 +143,12 @@ for loops in range(1000):
     if counter == N:
         break 
     
-# for the DQN to the initial data 
+# feed the initial Q data to the DQN, which effectively has discount factor of 0
 model.fit(D[:,0], init_Q_data, epochs = 8, batch_size = 16, verbose =0 ) # the Q_pred      
   
 
 # --------------------------------training-------------------------------------- 
-Q_table = np.ones( shape = (10*10) )*np.Inf # keep track of all the actions 
+Q_table = np.ones( shape = (10*10) )*np.Inf # to keep track of all the actions, for my own record  
 loss = []
 for episode in range(M): 
     
